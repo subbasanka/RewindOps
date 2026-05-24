@@ -1,0 +1,68 @@
+[
+  {
+    "_id": "INV-5521",
+    "customer_id": "CUST-9182",
+    "subscription_id": "SUB-4419",
+    "amount": 4999,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2026-05-01T00:00:00Z",
+    "paid_at": "2026-05-01T12:00:00Z",
+    "refund_status": "not_refunded"
+  },
+  {
+    "_id": "INV-5400",
+    "customer_id": "CUST-9182",
+    "subscription_id": "SUB-4419",
+    "amount": 4999,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2026-04-01T00:00:00Z",
+    "paid_at": "2026-04-01T10:00:00Z",
+    "refund_status": "not_refunded"
+  },
+  {
+    "_id": "INV-4892",
+    "customer_id": "CUST-3041",
+    "subscription_id": "SUB-3302",
+    "amount": 1499,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2026-05-01T00:00:00Z",
+    "paid_at": "2026-05-02T08:00:00Z",
+    "refund_status": "not_refunded"
+  },
+  {
+    "_id": "INV-4501",
+    "customer_id": "CUST-7756",
+    "subscription_id": "SUB-8871",
+    "amount": 499,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2026-05-01T00:00:00Z",
+    "paid_at": "2026-05-01T15:00:00Z",
+    "refund_status": "not_refunded"
+  },
+  {
+    "_id": "INV-6100",
+    "customer_id": "CUST-5520",
+    "subscription_id": "SUB-6650",
+    "amount": 7999,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2026-05-01T00:00:00Z",
+    "paid_at": "2026-05-01T06:00:00Z",
+    "refund_status": "not_refunded"
+  },
+  {
+    "_id": "INV-3200",
+    "customer_id": "CUST-1198",
+    "subscription_id": "SUB-2210",
+    "amount": 1499,
+    "currency": "USD",
+    "status": "paid",
+    "issued_at": "2025-12-01T00:00:00Z",
+    "paid_at": "2025-12-02T09:00:00Z",
+    "refund_status": "refunded"
+  }
+]

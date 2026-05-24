@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "SUB-4419",
+    "customer_id": "CUST-9182",
+    "status": "active",
+    "plan": "enterprise",
+    "monthly_amount": 4999,
+    "currency": "USD",
+    "renewal_date": "2026-08-01",
+    "addons": ["analytics", "priority_support"],
+    "created_at": "2025-01-15T10:00:00Z",
+    "last_updated_at": "2026-05-01T12:00:00Z"
+  },
+  {
+    "_id": "SUB-3302",
+    "customer_id": "CUST-3041",
+    "status": "active",
+    "plan": "professional",
+    "monthly_amount": 1499,
+    "currency": "USD",
+    "renewal_date": "2026-07-22",
+    "addons": ["analytics"],
+    "created_at": "2025-03-22T14:30:00Z",
+    "last_updated_at": "2026-04-22T14:30:00Z"
+  },
+  {
+    "_id": "SUB-8871",
+    "customer_id": "CUST-7756",
+    "status": "active",
+    "plan": "starter",
+    "monthly_amount": 499,
+    "currency": "USD",
+    "renewal_date": "2026-07-10",
+    "addons": [],
+    "created_at": "2025-06-10T09:00:00Z",
+    "last_updated_at": "2026-04-10T09:00:00Z"
+  },
+  {
+    "_id": "SUB-6650",
+    "customer_id": "CUST-5520",
+    "status": "active",
+    "plan": "enterprise",
+    "monthly_amount": 7999,
+    "currency": "USD",
+    "renewal_date": "2026-11-01",
+    "addons": ["analytics", "priority_support", "sso"],
+    "created_at": "2024-11-01T08:00:00Z",
+    "last_updated_at": "2026-05-01T08:00:00Z"
+  },
+  {
+    "_id": "SUB-2210",
+    "customer_id": "CUST-1198",
+    "status": "cancelled",
+    "plan": "professional",
+    "monthly_amount": 0,
+    "currency": "USD",
+    "renewal_date": null,
+    "addons": [],
+    "created_at": "2025-02-14T11:00:00Z",
+    "last_updated_at": "2026-01-14T11:00:00Z"
+  }
+]
