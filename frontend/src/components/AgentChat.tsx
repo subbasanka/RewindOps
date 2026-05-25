@@ -8,12 +8,140 @@ import { BlastRadiusCard } from "./BlastRadiusCard";
 import { ExecutionReceipt } from "./ExecutionReceipt";
 import { RollbackResult } from "./RollbackResult";
 import { RiskBadge } from "./RiskBadge";
-import { Send, Cpu, Terminal, Sparkles, MessageSquare, AlertCircle, ArrowRight } from "lucide-react";
+import { Send, Cpu, Terminal, Sparkles, MessageSquare, AlertCircle, ArrowRight, CreditCard, Shield, Calendar, Award, User, Layers, Info } from "lucide-react";
 
 interface ToolCard {
   type: "risk" | "blast_radius" | "approval" | "execution" | "rollback";
   data: Record<string, unknown>;
 }
+
+interface ParsedMessage {
+  text: string;
+  safetyFilters: string[];
+  structuredCard: {
+    title: string;
+    fields: { label: string; value: string }[];
+  } | null;
+}
+
+function parseMessageContent(content: string): ParsedMessage {
+  const lines = content.split("\n");
+  const safetyFilters: string[] = [];
+  const textLines: string[] = [];
+  const fields: { label: string; value: string }[] = [];
+  let possibleTitle = "";
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (fields.length === 0) {
+        textLines.push(line);
+      }
+      continue;
+    }
+
+    // 1. Detect safety filter calls
+    const filterMatch = trimmed.match(/^\[Calling safety filter:\s*(.*?)\.\.\.\]$/i);
+    if (filterMatch) {
+      safetyFilters.push(filterMatch[1]);
+      continue;
+    }
+
+    // 2. Detect key-value fields
+    // Handles formats like: * **Label:** Value or **Label**: Value
+    const fieldMatch = trimmed.match(/^[*-\s]*\*\*(.*?)\*\*[:\s]+(.*)/);
+    if (fieldMatch) {
+      fields.push({
+        label: fieldMatch[1].trim(),
+        value: fieldMatch[2].trim(),
+      });
+      continue;
+    }
+
+    // If it's not a safety filter or field:
+    if (fields.length === 0) {
+      textLines.push(line);
+      possibleTitle = trimmed; // Keep track of the last line of text as the title
+    } else {
+      textLines.push(line);
+    }
+  }
+
+  let cardTitle = "Structured Details";
+  if (fields.length > 0 && possibleTitle) {
+    cardTitle = possibleTitle.replace(/[:：]$/, ""); // remove trailing colon
+    const titleIdx = textLines.lastIndexOf(possibleTitle);
+    if (titleIdx !== -1) {
+      textLines.splice(titleIdx, 1);
+    }
+  }
+
+  return {
+    text: textLines.join("\n").trim(),
+    safetyFilters: Array.from(new Set(safetyFilters)),
+    structuredCard: fields.length > 0 ? { title: cardTitle, fields } : null,
+  };
+}
+
+const getFieldIcon = (label: string) => {
+  const l = label.toLowerCase();
+  if (l.includes("id")) return <CreditCard className="w-3.5 h-3.5 text-indigo-400" />;
+  if (l.includes("status")) return <Shield className="w-3.5 h-3.5 text-emerald-400" />;
+  if (l.includes("date")) return <Calendar className="w-3.5 h-3.5 text-amber-400" />;
+  if (l.includes("amount") || l.includes("price") || l.includes("billing")) return <Award className="w-3.5 h-3.5 text-emerald-400" />;
+  if (l.includes("customer") || l.includes("user")) return <User className="w-3.5 h-3.5 text-sky-400" />;
+  if (l.includes("addon") || l.includes("feature")) return <Layers className="w-3.5 h-3.5 text-purple-400" />;
+  return <Info className="w-3.5 h-3.5 text-slate-400" />;
+};
+
+const renderStructuredCard = (card: { title: string; fields: { label: string; value: string }[] }) => {
+  return (
+    <div className="mt-3 p-4 rounded-xl border border-white/5 bg-slate-950/40 backdrop-blur-md shadow-inner space-y-3 max-w-full">
+      <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase border-b border-white/5 pb-2">
+        {card.title}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {card.fields.map((f, i) => {
+          const isStatus = f.label.toLowerCase().includes("status");
+          const isActive = f.value.toLowerCase() === "active";
+          const isCancelled = f.value.toLowerCase().includes("cancel");
+          const isAmount = f.label.toLowerCase().includes("amount") || f.label.toLowerCase().includes("price");
+
+          return (
+            <div key={i} className="flex flex-col space-y-1 bg-slate-900/35 border border-white/[0.02] p-2.5 rounded-lg">
+              <span className="text-[10px] font-bold tracking-wide text-slate-500 uppercase flex items-center gap-1.5">
+                {getFieldIcon(f.label)}
+                {f.label}
+              </span>
+              {isStatus ? (
+                <div className="flex items-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-extrabold uppercase border ${
+                    isActive 
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                      : isCancelled
+                      ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                      : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400 animate-pulse" : isCancelled ? "bg-rose-400" : "bg-slate-400"}`} />
+                    {f.value}
+                  </span>
+                </div>
+              ) : isAmount ? (
+                <span className="text-xs font-bold text-emerald-400 font-mono">
+                  {f.value}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-slate-200">
+                  {f.value}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export function AgentChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -351,12 +479,37 @@ export function AgentChat() {
             ) : (
               /* Agent message balloon */
               <div className="flex justify-start animate-in slide-in-from-left-4 duration-200">
-                <div className="flex gap-3 max-w-[85%]">
+                <div className="flex gap-3 max-w-[85%] w-full">
                   <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shrink-0">
                     <Cpu className="w-3.5 h-3.5" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-sm bg-slate-900/60 border border-white/5 text-slate-100 px-4 py-3 text-sm leading-relaxed shadow-lg backdrop-blur-sm">
-                    <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                  <div className="flex-1 space-y-2">
+                    {(() => {
+                      const parsed = parseMessageContent(msg.content);
+                      const showBubble = parsed.text || parsed.safetyFilters.length > 0;
+                      return (
+                        <>
+                          {showBubble && (
+                            <div className="rounded-2xl rounded-tl-sm bg-slate-900/60 border border-white/5 text-slate-100 px-4 py-3 text-sm leading-relaxed shadow-lg backdrop-blur-sm space-y-2">
+                              {parsed.text && (
+                                <div className="whitespace-pre-wrap break-words">{parsed.text}</div>
+                              )}
+                              {parsed.safetyFilters.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-white/5">
+                                  {parsed.safetyFilters.map((filter, fi) => (
+                                    <div key={fi} className="inline-flex items-center gap-1.5 bg-indigo-500/5 border border-indigo-500/15 px-2.5 py-1 rounded-full text-[10px] font-bold text-indigo-400">
+                                      <Terminal className="w-3 h-3 text-indigo-400 animate-pulse" />
+                                      <span>Safety Gate Active: {filter}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {parsed.structuredCard && renderStructuredCard(parsed.structuredCard)}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
