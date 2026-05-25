@@ -1,0 +1,36 @@
+services:
+  mongodb-mcp-server:
+    image: node:20-slim
+    command: npx -y mongodb-mcp-server@latest --transport http --httpPort 3000 --connectionString "${MONGODB_URI}"
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+    restart: unless-stopped
+
+  agent:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DATABASE_BUSINESS=acmesub
+      - MONGODB_DATABASE_REWINDOPS=rewindops
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3-flash-preview}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
+      - MONGODB_MCP_URL=http://mongodb-mcp-server:3000/mcp
+    depends_on:
+      - mongodb-mcp-server
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+    depends_on:
+      - agent
+    restart: unless-stopped
