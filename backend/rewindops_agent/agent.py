@@ -13,10 +13,10 @@ Architecture:
           └── before_tool_callback (write interception safety net)
 """
 
-from google.adk.tools.mcp_tool.mcp_toolset import McpToolset, StdioConnectionParams, StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset, StdioConnectionParams, StdioServerParameters, SseConnectionParams
 import os
 
-from rewindops_agent.config import GEMINI_MODEL, MONGODB_URI
+from rewindops_agent.config import GEMINI_MODEL, MONGODB_URI, MONGODB_MCP_URL
 from rewindops_agent.callbacks.write_interceptor import rewindops_before_tool
 from rewindops_agent.tools.risk_classifier import classify_risk
 from rewindops_agent.tools.checkpoint import create_checkpoint
@@ -34,7 +34,7 @@ You help users manage customer subscriptions, invoices, support tickets, and pla
 ## YOUR CORE RULES
 
 1. You can FREELY read data from MongoDB using the MongoDB MCP tools (find, aggregate, count).
-2. You must NEVER directly call MongoDB write tools (update-one, update-many, delete-many, insert-many) on business data. All writes must go through the RewindOps safety flow.
+2. You must NEVER directly call MongoDB write tools (insert-one, update-one, delete-one) on business data in your final execution, but you can see them. All writes must go through the RewindOps safety flow.
 3. For ANY action that changes billing, subscription status, customer status, or invoice state, you MUST follow the RewindOps flow below.
 
 ## REWINDOPS SAFETY FLOW
@@ -47,21 +47,22 @@ When a user requests a business write action, follow these steps in order:
 - Determine the action type (e.g., cancel_subscription, refund_invoice, update_customer_plan).
 
 ### Step 2: Classify risk
-- Call classify_risk() with the action_type, collection, document_id, and proposed_changes.
+- Call classify_risk() with the action_type, collection, document_id, proposed_changes, and optional operation_type (INSERT, UPDATE, DELETE).
+- This creates the initial action receipt and returns a unique action_id.
 - If the result is "BLOCK", inform the user the action is blocked and cannot proceed.
 - If the result shows approval is required, continue to Step 3.
 - If no approval is needed (low risk), you may still checkpoint and proceed.
 
 ### Step 3: Create checkpoint
-- Call create_checkpoint() with the action_id, collection, and document_id.
-- This snapshots the current document state so it can be restored later.
+- Call create_checkpoint() with the action_id as the ONLY parameter.
+- This statefully snapshots the current document state before modification.
 
 ### Step 4: Preview blast radius
-- Call preview_blast_radius() with the action_id, collection, document_id, and proposed_changes.
-- Present the blast radius to the user, showing what will change and the business impact.
+- Call preview_blast_radius() with the action_id as the ONLY parameter.
+- Present the blast radius to the user, showing what will change, any PII masked fields, and the business impact.
 
 ### Step 5: Request approval (for medium/high risk)
-- Call request_approval() with all the risk and blast radius information.
+- Call request_approval() with the action_id as the ONLY parameter.
 - Present the approval card to the user.
 - STOP and wait for the user to respond with their decision.
 - Do NOT proceed until the user explicitly approves or rejects.
@@ -72,7 +73,7 @@ When a user requests a business write action, follow these steps in order:
 - If rejected, inform the user and stop.
 
 ### Step 7: Execute
-- Call execute_action() with the action_id.
+- Call execute_action() with the action_id as the ONLY parameter.
 - Report the result to the user.
 - Mention that rollback is available if they need to undo the change.
 
@@ -80,13 +81,9 @@ When a user requests a business write action, follow these steps in order:
 - If the user asks to undo/rollback an action, call rollback_action() with the action_id.
 - Report the restoration result with before/after comparison.
 
-## ACTION ID FORMAT
-Generate action IDs as "ACT-" followed by 8 random hex characters (e.g., "ACT-A1B2C3D4").
-
 ## IMPORTANT BEHAVIORS
 - Always show the customer and subscription details before proposing changes.
 - Always explain what will change in plain English.
-- For the proposed_changes parameter, provide the MongoDB field values that will change (e.g., {"status": "cancelled", "renewal_date": null}).
 - Be transparent about risk levels and why an action is classified the way it is.
 - After execution, always remind the user that rollback is available.
 - If the user asks about action history, use list_action_history() or get_action_detail().
@@ -101,15 +98,26 @@ You are operating on demo data for AcmeSub. Key customers include:
 """
 
 
-mongo_mcp = McpToolset(
-    connection_params=StdioConnectionParams(
+# Dynamically load connection parameters based on configured transport
+mcp_transport = os.getenv("MONGODB_MCP_TRANSPORT", "stdio").lower()
+
+if mcp_transport in ("sse", "http"):
+    connection_params = SseConnectionParams(
+        url=MONGODB_MCP_URL,
+        timeout=30.0
+    )
+else:
+    connection_params = StdioConnectionParams(
         server_params=StdioServerParameters(
             command="npx.cmd" if os.name == "nt" else "npx",
             args=["-y", "mongodb-mcp-server@latest", MONGODB_URI]
         ),
-        timeout=30.0
-    ),
-    tool_filter=['find', 'count', 'aggregate']
+        timeout=60.0
+    )
+
+mongo_mcp = McpToolset(
+    connection_params=connection_params,
+    tool_filter=['find', 'count', 'aggregate', 'insert-many', 'update-many', 'delete-many']
 )
 
 from google.adk.agents import LlmAgent
@@ -132,3 +140,4 @@ root_agent = LlmAgent(
     ],
     before_tool_callback=rewindops_before_tool,
 )
+
