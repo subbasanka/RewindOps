@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DATABASE_BUSINESS = os.getenv("MONGODB_DATABASE_BUSINESS", "acmesub")
@@ -20,10 +20,14 @@ BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
 
 AGENT_ENGINE_ENABLED = os.getenv("AGENT_ENGINE_ENABLED", "false").lower() == "true"
 
+SENSITIVE_FIELDS = {"email", "phone", "billing_address", "address"}
+
 BUSINESS_COLLECTIONS = {"customers", "subscriptions", "invoices"}
 
 BLOCKED_MCP_WRITE_TOOLS = {
+    "insert-one",
     "update-one",
+    "delete-one",
     "update-many",
     "delete-many",
     "insert-many",
