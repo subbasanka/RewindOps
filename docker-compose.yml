@@ -21,6 +21,7 @@ services:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
       - MONGODB_MCP_URL=http://mongodb-mcp-server:3000/mcp
+      - MONGODB_MCP_TRANSPORT=sse
     depends_on:
       - mongodb-mcp-server
     restart: unless-stopped
