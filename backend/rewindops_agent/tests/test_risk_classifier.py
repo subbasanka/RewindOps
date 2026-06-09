@@ -6,8 +6,10 @@ from unittest.mock import patch, MagicMock
 
 @pytest.fixture(autouse=True)
 def mock_mongo():
-    with patch("rewindops_agent.tools.risk_classifier.get_business_db") as mock_db:
+    with patch("rewindops_agent.tools.risk_classifier.get_business_db") as mock_db, \
+         patch("rewindops_agent.tools.risk_classifier.get_rewindops_db") as mock_rw:
         db = MagicMock()
+        rw_db = MagicMock()
 
         async def find_one_sub(filter_dict):
             if filter_dict.get("_id") == "SUB-4419":
@@ -43,6 +45,15 @@ def mock_mongo():
 
         db.__getitem__ = getitem
         mock_db.return_value = db
+
+        async def replace_one(filter_dict, doc, upsert=False):
+            return MagicMock()
+
+        rw_coll = MagicMock()
+        rw_coll.replace_one = replace_one
+        rw_db.__getitem__ = lambda self, name: rw_coll
+        mock_rw.return_value = rw_db
+
         yield mock_db
 
 

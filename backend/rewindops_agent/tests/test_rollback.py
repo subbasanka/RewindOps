@@ -67,12 +67,14 @@ def mock_dbs():
                 "checkpoint_id": "CHK-TEST001",
                 "collection": "subscriptions",
                 "document_id": "SUB-4419",
+                "after_state": MODIFIED_DOC.copy(),
             },
             "ACT-ALREADY-ROLLED": {
                 "_id": "ACT-ALREADY-ROLLED",
                 "execution_status": "executed",
                 "rollback_status": "rolled_back",
                 "checkpoint_id": "CHK-TEST002",
+                "after_state": MODIFIED_DOC.copy(),
             },
             "ACT-INSERT": {
                 "_id": "ACT-INSERT",
@@ -81,6 +83,7 @@ def mock_dbs():
                 "checkpoint_id": "CHK-INSERT",
                 "collection": "subscriptions",
                 "document_id": "SUB-NEW-DOC",
+                "after_state": {"_id": "SUB-NEW-DOC", "status": "active"},
             },
             "ACT-DELETE": {
                 "_id": "ACT-DELETE",
@@ -89,6 +92,7 @@ def mock_dbs():
                 "checkpoint_id": "CHK-DELETE",
                 "collection": "subscriptions",
                 "document_id": "SUB-4419",
+                "after_state": None,
             },
         }
 
@@ -140,13 +144,29 @@ def mock_dbs():
                     return checkpoints.get(doc_id)
                 return None
 
+            async def find_one_and_update(filter_dict, update_dict, return_document=None):
+                doc_id = filter_dict.get("_id")
+                if name == "action_receipts" and doc_id in receipts:
+                    receipt = receipts[doc_id]
+                    # Verify criteria
+                    if (filter_dict.get("execution_status") == receipt.get("execution_status") and
+                            filter_dict.get("rollback_status") == receipt.get("rollback_status")):
+                        if "$set" in update_dict:
+                            receipt.update(update_dict["$set"])
+                        return receipt
+                return None
+
             async def insert_one(doc):
                 inserted_rollbacks.append(doc)
 
             async def update_one(filter_dict, update):
-                pass
+                doc_id = filter_dict.get("_id")
+                if name == "action_receipts" and doc_id in receipts:
+                    if "$set" in update:
+                        receipts[doc_id].update(update["$set"])
 
             coll.find_one = find_one
+            coll.find_one_and_update = find_one_and_update
             coll.insert_one = insert_one
             coll.update_one = update_one
             return coll
@@ -231,3 +251,17 @@ class TestRollback:
         assert mock_dbs["current_biz_state"]["SUB-4419"]["status"] == "active"
         assert len(result["changes_restored"]) > 0
         assert result["changes_restored"][0]["was"] is None
+
+    @pytest.mark.asyncio
+    async def test_rollback_conflict_skew_aborts(self, mock_dbs):
+        from rewindops_agent.tools.rollback import rollback_action
+
+        # Modify the mock database state post-execution to differ from receipt's after_state
+        mock_dbs["current_biz_state"]["SUB-4419"]["monthly_amount"] = 999999
+
+        result = await rollback_action(action_id="ACT-TEST001")
+
+        assert result["status"] == "error"
+        assert "post-execution state skew" in result["error"]
+        assert "monthly_amount" in result["error"]
+
