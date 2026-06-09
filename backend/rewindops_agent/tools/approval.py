@@ -1,70 +1,57 @@
 """Approval gate — returns structured approval request for the frontend."""
 
-import uuid
-from datetime import datetime, timezone
-from typing import Any
 from rewindops_agent.services.mongo_client import get_rewindops_db
 
 
 async def request_approval(
     action_id: str,
-    action_type: str,
-    collection: str,
-    document_id: str,
-    risk_level: str,
-    risk_score: int,
-    risk_reasons: list[str],
-    blast_radius_summary: str,
-    field_changes: list[dict],
-    business_impact: list[str],
-    checkpoint_id: str,
-    proposed_changes: dict[str, Any],
 ) -> dict:
-    """Request human approval for a risky action. This creates an action receipt in pending state and returns approval card data for the UI.
+    """Request human approval for a risky action. This updates the action receipt to pending and returns approval card data for the UI.
+       Loads all details dynamically from the receipt.
 
     Args:
         action_id: The unique action ID.
-        action_type: The type of action (e.g., cancel_subscription).
-        collection: The target MongoDB collection.
-        document_id: The target document _id.
-        risk_level: The classified risk level (low, medium, high, critical).
-        risk_score: The numeric risk score.
-        risk_reasons: List of reasons for the risk classification.
-        blast_radius_summary: A human-readable summary of what will change.
-        field_changes: List of before/after field diffs.
-        business_impact: List of business impact statements.
-        checkpoint_id: The checkpoint ID for this action.
-        proposed_changes: The proposed MongoDB update operations.
 
     Returns:
         A dict with the approval card data. The agent should present this to the user and wait for their decision.
     """
     rewindops_db = get_rewindops_db()
-    now = datetime.now(timezone.utc)
 
-    receipt = {
-        "_id": action_id,
-        "agent_id": "support-agent-demo",
-        "action_type": action_type,
-        "collection": collection,
-        "document_id": document_id,
-        "risk_level": risk_level,
-        "risk_score": risk_score,
-        "risk_reasons": risk_reasons,
-        "blast_radius_summary": blast_radius_summary,
-        "field_changes": field_changes,
-        "business_impact": business_impact,
-        "proposed_changes": proposed_changes,
-        "checkpoint_id": checkpoint_id,
-        "approval_required": True,
-        "approval_status": "pending",
-        "execution_status": "pending",
-        "rollback_status": "not_applicable",
-        "created_at": now.isoformat(),
-    }
+    receipt = await rewindops_db["action_receipts"].find_one({"_id": action_id})
+    if not receipt:
+        return {
+            "status": "error",
+            "error": f"Action receipt '{action_id}' not found. Cannot request approval.",
+        }
 
-    await rewindops_db["action_receipts"].replace_one(
-        {"_id": action_id}, receipt, upsert=True
+    valid_states = ("previewed", "checkpointed", "classified")
+    if receipt.get("pipeline_state") not in valid_states:
+        return {
+            "status": "error",
+            "error": (
+                f"Action '{action_id}' is in state '{receipt.get('pipeline_state')}'. "
+                "Approval request requires the action to be in a pre-execution state."
+            ),
+        }
+
+    action_type = receipt["action_type"]
+    collection = receipt["collection"]
+    document_id = receipt["document_id"]
+    risk_level = receipt["risk_level"]
+    risk_score = receipt["risk_score"]
+    field_changes = receipt.get("field_changes", [])
+    business_impact = receipt.get("business_impact", [])
+    blast_radius_summary = receipt.get("blast_radius_summary", "")
+    checkpoint_id = receipt.get("checkpoint_id", "")
+
+    # Ensure receipt status is updated to pending approval state
+    await rewindops_db["action_receipts"].update_one(
+        {"_id": action_id},
+        {"$set": {
+            "approval_required": True,
+            "approval_status": "pending",
+            "pipeline_state": "awaiting_approval",
+        }}
     )
 
     return {

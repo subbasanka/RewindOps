@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from pymongo import ReturnDocument
 from rewindops_agent.services.mongo_client import get_business_db, get_rewindops_db
 
 
@@ -10,6 +11,7 @@ async def rollback_action(
     reason: str = "",
 ) -> dict:
     """Rollback a previously executed action by restoring the checkpointed document state.
+       Includes atomic concurrency guard and post-execution state skew conflict detection.
 
     Args:
         action_id: The action ID to rollback.
@@ -21,27 +23,51 @@ async def rollback_action(
     rewindops_db = get_rewindops_db()
     business_db = get_business_db()
 
-    receipt = await rewindops_db["action_receipts"].find_one({"_id": action_id})
+    # Concurrency Guard: Atomic update of rollback_status to 'rolling_back'
+    receipt = await rewindops_db["action_receipts"].find_one_and_update(
+        {
+            "_id": action_id,
+            "execution_status": "executed",
+            "rollback_status": "available",
+        },
+        {"$set": {"rollback_status": "rolling_back"}},
+        return_document=ReturnDocument.AFTER,
+    )
+
     if not receipt:
+        existing = await rewindops_db["action_receipts"].find_one({"_id": action_id})
+        if not existing:
+            return {
+                "status": "error",
+                "error": f"Action receipt '{action_id}' not found.",
+            }
+        if existing.get("execution_status") != "executed":
+            return {
+                "status": "error",
+                "error": f"Action '{action_id}' has not been executed. Cannot rollback.",
+            }
+        if existing.get("rollback_status") == "rolled_back":
+            return {
+                "status": "error",
+                "error": f"Action '{action_id}' has already been rolled back.",
+            }
+        if existing.get("rollback_status") == "rolling_back":
+            return {
+                "status": "error",
+                "error": f"Action '{action_id}' is currently rolling back.",
+            }
         return {
             "status": "error",
-            "error": f"Action receipt '{action_id}' not found.",
-        }
-
-    if receipt.get("execution_status") != "executed":
-        return {
-            "status": "error",
-            "error": f"Action '{action_id}' has not been executed. Cannot rollback.",
-        }
-
-    if receipt.get("rollback_status") == "rolled_back":
-        return {
-            "status": "error",
-            "error": f"Action '{action_id}' has already been rolled back.",
+            "error": f"Action '{action_id}' rollback not available. Current rollback status: {existing.get('rollback_status')}.",
         }
 
     checkpoint_id = receipt.get("checkpoint_id")
     if not checkpoint_id:
+        # Reset rollback_status to available
+        await rewindops_db["action_receipts"].update_one(
+            {"_id": action_id},
+            {"$set": {"rollback_status": "available"}}
+        )
         return {
             "status": "error",
             "error": f"No checkpoint found for action '{action_id}'. Rollback not available.",
@@ -49,6 +75,11 @@ async def rollback_action(
 
     checkpoint = await rewindops_db["action_checkpoints"].find_one({"_id": checkpoint_id})
     if not checkpoint:
+        # Reset rollback_status to available
+        await rewindops_db["action_receipts"].update_one(
+            {"_id": action_id},
+            {"$set": {"rollback_status": "available"}}
+        )
         return {
             "status": "error",
             "error": f"Checkpoint '{checkpoint_id}' not found. Rollback not available.",
@@ -57,11 +88,35 @@ async def rollback_action(
     collection = checkpoint["collection"]
     document_id = checkpoint["document_id"]
     before_state = checkpoint["before_state"]
-
-    current_doc = await business_db[collection].find_one({"_id": document_id})
     op_type = checkpoint.get("operation_type", "UPDATE").upper()
 
     try:
+        current_doc = await business_db[collection].find_one({"_id": document_id})
+        after_state = receipt.get("after_state")
+
+        # Conflict Detection: Compare current state with after_state recorded during execution
+        if current_doc != after_state:
+            mismatched_fields = []
+            if current_doc is None:
+                mismatched_fields.append("document_deleted")
+            elif after_state is None:
+                mismatched_fields.append("document_recreated")
+            else:
+                all_keys = set(current_doc.keys()) | set(after_state.keys())
+                for k in all_keys:
+                    if current_doc.get(k) != after_state.get(k):
+                        mismatched_fields.append(k)
+
+            # Reset rollback_status to available
+            await rewindops_db["action_receipts"].update_one(
+                {"_id": action_id},
+                {"$set": {"rollback_status": "available"}}
+            )
+            return {
+                "status": "error",
+                "error": f"Rollback aborted due to post-execution state skew. Mismatched fields: {mismatched_fields}.",
+            }
+
         if op_type == "INSERT":
             await business_db[collection].delete_one({"_id": document_id})
             restored_doc = None
@@ -70,7 +125,7 @@ async def rollback_action(
             await business_db[collection].insert_one(before_state)
             restored_doc = await business_db[collection].find_one({"_id": document_id})
             verification = "matched" if restored_doc == before_state else "mismatch"
-        else: # UPDATE
+        else:  # UPDATE
             await business_db[collection].replace_one(
                 {"_id": document_id},
                 before_state,
@@ -105,6 +160,7 @@ async def rollback_action(
                 "rollback_status": "rolled_back",
                 "rollback_event_id": rollback_event_id,
                 "rolled_back_at": now.isoformat(),
+                "pipeline_state": "rolled_back",
             }},
         )
 
@@ -134,7 +190,7 @@ async def rollback_action(
                         "was": None,
                         "restored_to": val,
                     })
-        else: # UPDATE
+        else:  # UPDATE
             if current_doc and before_state:
                 for key in set(list(current_doc.keys()) + list(before_state.keys())):
                     if key == "_id":
@@ -167,7 +223,13 @@ async def rollback_action(
         }
 
     except Exception as e:
+        # Reset rollback_status to available
+        await rewindops_db["action_receipts"].update_one(
+            {"_id": action_id},
+            {"$set": {"rollback_status": "available"}}
+        )
         return {
             "status": "error",
             "error": f"Rollback failed: {str(e)}",
         }
+

@@ -1,13 +1,44 @@
-"""Action history — query past actions, receipts, and rollback events."""
-
-from typing import Optional
+from typing import Any, Optional
+from rewindops_agent.config import SENSITIVE_FIELDS
 from rewindops_agent.services.mongo_client import get_rewindops_db
+
+
+def mask_value(val: Any) -> Any:
+    if not isinstance(val, str):
+        return val
+    if "@" in val:  # Email masking
+        parts = val.split("@")
+        if len(parts) == 2:
+            username, domain = parts
+            if len(username) > 1:
+                return f"{username[0]}***{username[-1]}@{domain}"
+            return f"***@{domain}"
+    if len(val) > 4:
+        return f"{val[:2]}***{val[-2:]}"
+    return "***"
+
+
+def mask_dict(d: Any) -> Any:
+    if not isinstance(d, dict):
+        return d
+    res = {}
+    for k, v in d.items():
+        if k in SENSITIVE_FIELDS:
+            res[k] = mask_value(v)
+        elif isinstance(v, dict):
+            res[k] = mask_dict(v)
+        elif isinstance(v, list):
+            res[k] = [mask_dict(item) if isinstance(item, dict) else item for item in v]
+        else:
+            res[k] = v
+    return res
 
 
 async def list_action_history(
     limit: int = 20,
     risk_level_filter: Optional[str] = None,
     status_filter: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> dict:
     """List recent action receipts from RewindOps history.
 
@@ -15,13 +46,16 @@ async def list_action_history(
         limit: Maximum number of actions to return (default 20).
         risk_level_filter: Optional filter by risk level (low, medium, high, critical).
         status_filter: Optional filter by execution status (pending, executed, failed, rolled_back).
+        user_id: Optional filter by user who triggered the action.
 
     Returns:
         A dict with a list of action receipts.
     """
     rewindops_db = get_rewindops_db()
 
-    query = {}
+    query: dict[str, Any] = {}
+    if user_id:
+        query["user_id"] = user_id
     if risk_level_filter:
         query["risk_level"] = risk_level_filter
     if status_filter:
@@ -61,6 +95,7 @@ async def get_action_detail(
     action_id: str,
 ) -> dict:
     """Get full details of a specific action including checkpoint and rollback data.
+       PII fields are masked inside before_state logs to protect user privacy.
 
     Args:
         action_id: The action ID to look up.
@@ -110,7 +145,7 @@ async def get_action_detail(
         },
         "checkpoint": {
             "checkpoint_id": checkpoint["_id"],
-            "before_state": checkpoint.get("before_state"),
+            "before_state": mask_dict(checkpoint.get("before_state")),
             "rollback_available": checkpoint.get("rollback_available"),
             "created_at": checkpoint.get("created_at"),
         } if checkpoint else None,
