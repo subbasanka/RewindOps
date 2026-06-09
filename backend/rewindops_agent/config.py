@@ -1,5 +1,8 @@
 import os
+from contextvars import ContextVar
 from dotenv import load_dotenv, find_dotenv
+
+current_user_id: ContextVar[str] = ContextVar("current_user_id", default="demo-user")
 
 load_dotenv(find_dotenv())
 
@@ -17,6 +20,12 @@ PHOENIX_MCP_URL = os.getenv("PHOENIX_MCP_URL", "http://localhost:6007/mcp")
 
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
+
+API_KEY = os.getenv("REWINDOPS_API_KEY", "")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
+CLERK_PUBLISHABLE_KEY = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "")
 
 AGENT_ENGINE_ENABLED = os.getenv("AGENT_ENGINE_ENABLED", "false").lower() == "true"
 
@@ -59,3 +68,12 @@ RISK_THRESHOLDS = {
     "high": (46, 75),
     "critical": (76, 200),
 }
+
+APPROVAL_REQUIREMENTS = {
+    "low": 0,
+    "medium": 0,
+    "high": 1,
+    "critical": 2,
+}
+
+APPROVAL_TIMEOUT_HOURS = int(os.getenv("APPROVAL_TIMEOUT_HOURS", "24"))
