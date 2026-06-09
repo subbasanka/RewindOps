@@ -1,10 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AgentChat } from "@/components/AgentChat";
+import { fetchAgentConfig } from "@/lib/api";
 import { Terminal, Shield, History, Cpu } from "lucide-react";
 
 export default function HomePage() {
+  const [modelName, setModelName] = useState("Loading...");
+
+  useEffect(() => {
+    fetchAgentConfig()
+      .then((cfg) => setModelName(cfg.model))
+      .catch(() => setModelName("unknown"));
+  }, []);
+
   return (
     <div className="relative flex flex-col h-screen overflow-hidden bg-[#050711]">
       {/* Decorative Blur Blobs */}
@@ -53,7 +63,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/30 text-indigo-300 border border-indigo-500/10 text-xs font-medium">
             <Cpu className="w-3.5 h-3.5" />
-            Gemini 2.5
+            {modelName}
           </div>
         </div>
       </header>

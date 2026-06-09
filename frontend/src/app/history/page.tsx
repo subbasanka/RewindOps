@@ -156,9 +156,16 @@ export default function HistoryPage() {
 
         {/* Detail Drawer */}
         {selectedAction && actionDetail && (
-          <div className="fixed inset-y-0 right-0 w-[520px] bg-slate-950/95 border-l border-white/10 shadow-2xl overflow-y-auto z-40 backdrop-blur-xl animate-in slide-in-from-right duration-300">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
+          <>
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 animate-in fade-in duration-200"
+              onClick={() => {
+                setSelectedAction(null);
+                setActionDetail(null);
+              }}
+            />
+            <div className="fixed inset-y-0 right-0 w-[520px] bg-slate-950/95 border-l border-white/10 shadow-2xl overflow-y-auto z-40 backdrop-blur-xl animate-in slide-in-from-right duration-300">
+              <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-slate-950/90 backdrop-blur-md">
                 <div className="flex flex-col">
                   <span className="text-xs uppercase font-semibold text-indigo-400 tracking-wider">Auditing System</span>
                   <h2 className="text-lg font-bold text-white font-sans">
@@ -170,19 +177,20 @@ export default function HistoryPage() {
                     setSelectedAction(null);
                     setActionDetail(null);
                   }}
-                  className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-slate-300 hover:text-white hover:bg-white/20 transition-colors text-xs font-semibold border border-white/10"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
+                  Close
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="p-6 space-y-2">
                 <span className="text-xs text-slate-400 font-semibold block">JSON Data Payload:</span>
                 <pre className="text-xs text-indigo-200 bg-slate-900 border border-white/5 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono shadow-inner scrollbar-thin">
                   {JSON.stringify(actionDetail, null, 2)}
                 </pre>
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Rollback Modal */}

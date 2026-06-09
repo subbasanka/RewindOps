@@ -61,3 +61,8 @@ export async function triggerRollback(
   });
   return response.json();
 }
+
+export async function fetchAgentConfig(): Promise<{ model: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/config`);
+  return response.json();
+}
