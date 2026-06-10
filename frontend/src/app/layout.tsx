@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "RewindOps AI — The Undo Layer for MCP-Powered Agents",
   description:
     "Built with Google Cloud Agent Builder and Gemini 3. Intercepts risky tool calls, checkpoints MongoDB state, previews blast radius, and enables one-click rollback.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
