@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchAgentConfig, setAuthTokenGetter } from "@/lib/api";
-import { Terminal, Shield, History, Cpu } from "lucide-react";
+import { Terminal, History, Cpu } from "lucide-react";
+import { RewindOpsLogo } from "./RewindOpsLogo";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
 
 function ClerkAuthWire() {
@@ -45,9 +46,7 @@ export function AppShell({ children, activePage, headerRight }: AppShellProps) {
 
       <header className="relative flex items-center justify-between px-6 py-4 border-b border-white/5 bg-slate-950/40 backdrop-blur-md z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
-            <Shield className="w-4.5 h-4.5" />
-          </div>
+          <RewindOpsLogo size={36} />
           <div className="flex flex-col">
             <span className="text-md font-bold tracking-tight text-white font-sans flex items-center gap-2">
               RewindOps AI

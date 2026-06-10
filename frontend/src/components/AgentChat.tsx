@@ -13,7 +13,8 @@ import { BlastRadiusCard } from "./BlastRadiusCard";
 import { ExecutionReceipt } from "./ExecutionReceipt";
 import { RollbackResult } from "./RollbackResult";
 import { RiskBadge } from "./RiskBadge";
-import { Send, Cpu, Terminal, Sparkles, MessageSquare, AlertCircle, ArrowRight, CreditCard, Shield, Calendar, Award, User, Layers, Info, Plus, Trash2, MessageCircle, PanelLeftClose, PanelLeft, Hash, DollarSign, Package, Zap } from "lucide-react";
+import { Send, Cpu, Terminal, MessageSquare, AlertCircle, ArrowRight, CreditCard, Shield, Calendar, Award, User, Layers, Info, Plus, Trash2, MessageCircle, PanelLeftClose, PanelLeft, Hash, DollarSign, Package, Zap } from "lucide-react";
+import { RewindOpsLogo } from "./RewindOpsLogo";
 
 interface ToolCard {
   type: "risk" | "blast_radius" | "approval" | "execution" | "rollback";
@@ -809,8 +810,8 @@ export function AgentChat() {
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center min-h-[80%] max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom duration-300">
             <div className="relative flex flex-col items-center text-center space-y-4">
-              <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 shadow-xl shadow-indigo-950/20 text-indigo-400">
-                <Sparkles className="w-8 h-8 animate-soft-pulse" />
+              <div className="relative flex items-center justify-center w-16 h-16">
+                <RewindOpsLogo size={56} className="animate-soft-pulse" />
               </div>
               <div className="space-y-1">
                 <h2 className="text-xl font-bold tracking-tight text-white font-sans">RewindOps Agent Console</h2>
