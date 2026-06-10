@@ -374,28 +374,9 @@ export function AgentChat() {
     setInitialLoadDone(true);
 
     (async () => {
-      const list = await loadSessions();
-      if (list.length > 0) {
-        const mostRecent = list[0];
-        setSessionId(mostRecent.session_id);
-        try {
-          const msgs = await fetchChatMessages(mostRecent.session_id);
-          setMessages(
-            msgs.map((m) => ({
-              id: m.message_id,
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp,
-              toolCards: (m.toolCards || []) as ToolCard[],
-            }))
-          );
-        } catch {
-          // no messages yet is fine
-        }
-      } else {
-        const newSid = await createSession();
-        setSessionId(newSid);
-      }
+      await loadSessions();
+      const newSid = await createSession();
+      setSessionId(newSid);
     })();
   }, [authLoaded, isSignedIn, getToken, initialLoadDone, loadSessions]);
 
