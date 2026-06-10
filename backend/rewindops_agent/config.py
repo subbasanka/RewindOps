@@ -18,7 +18,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 MONGODB_MCP_URL = os.getenv("MONGODB_MCP_URL", "http://localhost:3000/mcp")
 PHOENIX_MCP_URL = os.getenv("PHOENIX_MCP_URL", "http://localhost:6007/mcp")
 
-BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
+BACKEND_PORT = int(os.getenv("PORT", os.getenv("BACKEND_PORT", "8000")))
 BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
 
 API_KEY = os.getenv("REWINDOPS_API_KEY", "")

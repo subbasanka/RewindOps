@@ -42,6 +42,9 @@ export default function RootLayout({
               colorNeutral: "#e2e8f0",
               colorDanger: "#f43f5e",
             },
+            layout: {
+              unsafe_disableDevelopmentModeWarnings: true,
+            },
             elements: {
               socialButtonsBlockButton: {
                 backgroundColor: "#1e293b",

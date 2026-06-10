@@ -1,6 +1,12 @@
+from datetime import datetime
 from typing import Any, Optional
 from rewindops_agent.config import SENSITIVE_FIELDS
 from rewindops_agent.services.mongo_client import get_rewindops_db
+
+
+def _dt(val: Any) -> Any:
+    """Convert datetime to ISO string, pass through anything else."""
+    return val.isoformat() if isinstance(val, datetime) else (val or "")
 
 
 def mask_value(val: Any) -> Any:
@@ -80,8 +86,8 @@ async def list_action_history(
             "execution_status": action.get("execution_status", "unknown"),
             "rollback_status": action.get("rollback_status", "not_applicable"),
             "checkpoint_id": action.get("checkpoint_id"),
-            "created_at": action.get("created_at", ""),
-            "executed_at": action.get("executed_at"),
+            "created_at": _dt(action.get("created_at")),
+            "executed_at": _dt(action.get("executed_at")),
         })
 
     return {
@@ -140,19 +146,19 @@ async def get_action_detail(
             "approval_status": receipt.get("approval_status"),
             "execution_status": receipt.get("execution_status"),
             "rollback_status": receipt.get("rollback_status"),
-            "created_at": receipt.get("created_at"),
-            "executed_at": receipt.get("executed_at"),
+            "created_at": _dt(receipt.get("created_at")),
+            "executed_at": _dt(receipt.get("executed_at")),
         },
         "checkpoint": {
             "checkpoint_id": checkpoint["_id"],
             "before_state": mask_dict(checkpoint.get("before_state")),
             "rollback_available": checkpoint.get("rollback_available"),
-            "created_at": checkpoint.get("created_at"),
+            "created_at": _dt(checkpoint.get("created_at")),
         } if checkpoint else None,
         "rollback_event": {
             "rollback_event_id": rollback_event["_id"],
             "reason": rollback_event.get("reason"),
             "verification": rollback_event.get("verification"),
-            "completed_at": rollback_event.get("completed_at"),
+            "completed_at": _dt(rollback_event.get("completed_at")),
         } if rollback_event else None,
     }
