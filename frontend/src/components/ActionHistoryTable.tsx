@@ -64,10 +64,11 @@ export function ActionHistoryTable({
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <label className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">
+            <label htmlFor="risk-level-filter" className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">
               Risk Level
             </label>
             <select
+              id="risk-level-filter"
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
               className="bg-slate-950/80 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
@@ -82,10 +83,11 @@ export function ActionHistoryTable({
 
           <div className="flex items-center gap-2">
             <Activity className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <label className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">
+            <label htmlFor="status-state-filter" className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">
               Status State
             </label>
             <select
+              id="status-state-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-slate-950/80 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
@@ -107,7 +109,7 @@ export function ActionHistoryTable({
 
       {/* Grid Table */}
       <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/20 shadow-inner scrollbar-thin">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse" aria-label="Action history">
           <thead>
             <tr className="bg-slate-950/40 border-b border-white/5 text-slate-400">
               <th className="text-left px-4 py-4 text-[10px] uppercase tracking-widest font-bold">
@@ -152,6 +154,8 @@ export function ActionHistoryTable({
                 key={action.action_id}
                 className="hover:bg-white/[0.02] transition-colors cursor-pointer group"
                 onClick={() => onViewDetail(action.action_id)}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter") onViewDetail(action.action_id); }}
               >
                 <td className="px-4 py-3.5 font-mono text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">
                   {action.action_id}
