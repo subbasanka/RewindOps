@@ -82,12 +82,12 @@ export function AppShell({ children, activePage, headerRight }: AppShellProps) {
         </nav>
 
         <div className="flex items-center gap-3">
-          {activePage === "console" && (
+          {/* {activePage === "console" && (
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-[10px] text-slate-400">Target Agent</span>
               <span className="text-xs font-semibold text-slate-200">AcmeSub Support</span>
             </div>
-          )}
+          )} */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/30 text-indigo-300 border border-indigo-500/10 text-xs font-medium">
             <Cpu className="w-3.5 h-3.5" />
             {modelName}
