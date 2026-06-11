@@ -35,21 +35,24 @@ def mock_dbs():
                 "collection": "subscriptions",
                 "document_id": "SUB-4419",
                 "operation_type": "UPDATE",
-                "proposed_changes": {"status": "cancelled"}
+                "proposed_changes": {"status": "cancelled"},
+                "pipeline_state": "classified",
             },
             "ACT-TEST002": {
                 "_id": "ACT-TEST002",
                 "collection": "subscriptions",
                 "document_id": "SUB-NONEXISTENT",
                 "operation_type": "UPDATE",
-                "proposed_changes": {"status": "cancelled"}
+                "proposed_changes": {"status": "cancelled"},
+                "pipeline_state": "classified",
             },
             "ACT-TEST003": {
                 "_id": "ACT-TEST003",
                 "collection": "subscriptions",
                 "document_id": "SUB-NEW-DOC",
                 "operation_type": "INSERT",
-                "proposed_changes": {"status": "active"}
+                "proposed_changes": {"status": "active"},
+                "pipeline_state": "classified",
             }
         }
 

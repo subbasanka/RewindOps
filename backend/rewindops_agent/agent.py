@@ -120,7 +120,8 @@ else:
     connection_params = StdioConnectionParams(
         server_params=StdioServerParameters(
             command="npx.cmd" if os.name == "nt" else "npx",
-            args=["-y", "mongodb-mcp-server@latest", MONGODB_URI]
+            args=["-y", "mongodb-mcp-server@latest"],
+            env={**os.environ, "MDB_MCP_CONNECTION_STRING": MONGODB_URI},
         ),
         timeout=60.0
     )
